@@ -28,9 +28,10 @@ enum Enclave {
         }
     }
 
+    /// Reads `key.blob`. Fails with the `cubby init` hint when there is no store.
     static func loadKeyBlob() throws -> Data {
         guard let blob = try Store.read(Store.keyPath, what: "the store key in \(Store.display(Store.home))") else {
-            throw CubbyError("the store key in \(Store.display(Store.home)) cannot be loaded")
+            throw Store.noStore
         }
         return blob
     }

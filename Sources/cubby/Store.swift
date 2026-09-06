@@ -42,34 +42,22 @@ enum Store {
         FileManager.default.fileExists(atPath: keyPath)
     }
 
-    /// Fails unless the location holds a store key. Every command but `init` starts here.
+    /// Raised when there is no store.
+    static var noStore: CubbyError {
+        CubbyError("no store at \(display(home)); run cubby init first")
+    }
+
+    /// Fails unless the location holds a store key.
     static func requireStore() throws {
-        guard hasKey() else {
-            throw CubbyError("no store at \(display(home)); run cubby init first")
-        }
+        guard hasKey() else { throw noStore }
     }
 
-    /// Creates the store directories, or brings existing ones to mode 0700: `createDirectory`
-    /// leaves the mode of a directory that already exists untouched.
-    static func createDirectories() throws {
-        for dir in [home, secretsDir] {
-            try makeDirectory(dir)
-            guard chmod(dir, 0o700) == 0 else {
-                let code = errno
-                throw CubbyError("could not create \(location): \(message(for: code))")
-            }
-        }
-    }
-
-    /// Creates `secrets/` if it does not exist.
-    static func ensureSecretsDirectory() throws {
-        try makeDirectory(secretsDir)
-    }
-
-    private static func makeDirectory(_ dir: String) throws {
+    /// Creates `secrets/` and, with it, the store root, at mode 0700. Existing directories are
+    /// left as they are.
+    static func ensureDirectories() throws {
         do {
             try FileManager.default.createDirectory(
-                atPath: dir, withIntermediateDirectories: true,
+                atPath: secretsDir, withIntermediateDirectories: true,
                 attributes: [.posixPermissions: 0o700])
         } catch {
             throw CubbyError("could not create \(location): \(error.localizedDescription)")

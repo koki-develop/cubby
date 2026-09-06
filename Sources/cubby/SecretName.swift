@@ -7,7 +7,7 @@
 /// On disk a name appears only through `encoded`, the lowercase hex of its bytes, so the
 /// file system never interprets any character of it: no path separators, no `..`, no
 /// dotfiles, no case-insensitive or normalization-insensitive collisions.
-struct SecretName: Hashable, Comparable, CustomStringConvertible {
+struct SecretName: Comparable, CustomStringConvertible {
     /// Two hex digits per character plus the record and temporary file suffixes stay well
     /// under `NAME_MAX` (255).
     static let maxLength = 100

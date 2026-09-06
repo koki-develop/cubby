@@ -26,7 +26,7 @@ struct InitCommand: ParsableCommand {
     func run() throws {
         if Store.hasKey() { throw CubbyError("a store already exists at \(Store.display(Store.home))") }
         let key = try Enclave.generateKey()
-        try Store.createDirectories()
+        try Store.ensureDirectories()
         try Store.writeAtomically(key.dataRepresentation, to: Store.keyPath, action: "create \(Store.location)")
         print("Created a store at \(Store.display(Store.home))")
     }
@@ -40,9 +40,8 @@ struct SetCommand: ParsableCommand {
     @Flag(help: "Read the value from standard input instead of the terminal.") var fromStdin = false
 
     func run() throws {
-        try Store.requireStore()
         let blob = try Enclave.loadKeyBlob()
-        try Store.ensureSecretsDirectory()
+        try Store.ensureDirectories()
         let value: Data
         if fromStdin {
             do {
@@ -68,11 +67,10 @@ struct GetCommand: ParsableCommand {
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
     func run() throws {
-        try Store.requireStore()
+        let blob = try Enclave.loadKeyBlob()
         guard let record = try Store.read(Store.recordPath(for: name), what: "\"\(name)\"") else {
             throw CubbyError("no secret named \"\(name)\"")
         }
-        let blob = try Enclave.loadKeyBlob()
         let key = try Enclave.restoreKey(from: blob, operation: "read", name: name)
         guard let plaintext = try Record.open(record, name: name, key: key) else {
             throw CubbyError("\"\(name)\" cannot be decrypted")
