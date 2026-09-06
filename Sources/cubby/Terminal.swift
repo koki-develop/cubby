@@ -8,10 +8,9 @@ enum Terminal {
     private static let bufferSize = 4096
 
     /// Reads one line from `/dev/tty` with echo turned off. The line terminator is not part of
-    /// the result. Fails when no terminal is available or the input does not fit the buffer.
+    /// the result. Fails when no terminal is available.
     static func readSecret(prompt: String) throws -> Data {
         var buffer = [CChar](repeating: 0, count: bufferSize)
-        defer { _ = buffer.withUnsafeMutableBytes { memset_s($0.baseAddress, $0.count, 0, $0.count) } }
 
         let result = buffer.withUnsafeMutableBufferPointer { pointer in
             readpassphrase(prompt, pointer.baseAddress, pointer.count, RPP_ECHO_OFF | RPP_REQUIRE_TTY)
@@ -25,9 +24,6 @@ enum Terminal {
         }
 
         let length = strlen(buffer)
-        guard length < bufferSize - 1 else {
-            throw CubbyError("value is too long to type in; use --from-stdin")
-        }
         return Data(bytes: buffer, count: length)
     }
 }

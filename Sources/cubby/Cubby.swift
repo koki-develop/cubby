@@ -24,18 +24,10 @@ struct InitCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "init")
 
     func run() throws {
-        let alreadyExists = CubbyError("a store already exists at \(Store.display(Store.home))")
-        if try Store.hasKey() { throw alreadyExists }
-        try Store.requireEmptyLocation()
+        if Store.hasKey() { throw CubbyError("a store already exists at \(Store.display(Store.home))") }
         let key = try Enclave.generateKey()
-        try Enclave.verifyRequiresInteraction(key.dataRepresentation)
         try Store.createDirectories()
-        do {
-            try Store.writeAtomically(
-                key.dataRepresentation, to: Store.keyPath, action: "create \(Store.location)", replacing: false)
-        } catch is Store.AlreadyExists {
-            throw alreadyExists
-        }
+        try Store.writeAtomically(key.dataRepresentation, to: Store.keyPath, action: "create \(Store.location)")
         print("Created a store at \(Store.display(Store.home))")
     }
 }
@@ -49,9 +41,8 @@ struct SetCommand: ParsableCommand {
 
     func run() throws {
         try Store.requireStore()
-        let blob = try Enclave.loadVerifiedKeyBlob()
-        try Store.ensureWritableSecretsDirectory()
-        try Store.checkWritable(recordFor: name)
+        let blob = try Enclave.loadKeyBlob()
+        try Store.ensureSecretsDirectory()
         let value: Data
         if fromStdin {
             do {
@@ -78,12 +69,10 @@ struct GetCommand: ParsableCommand {
 
     func run() throws {
         try Store.requireStore()
-        guard let path = try Store.existingRecordPath(for: name),
-            let record = try Store.read(path, what: "\"\(name)\"")
-        else {
+        guard let record = try Store.read(Store.recordPath(for: name), what: "\"\(name)\"") else {
             throw CubbyError("no secret named \"\(name)\"")
         }
-        let blob = try Enclave.loadVerifiedKeyBlob()
+        let blob = try Enclave.loadKeyBlob()
         let key = try Enclave.restoreKey(from: blob, operation: "read", name: name)
         guard let plaintext = try Record.open(record, name: name, key: key) else {
             throw CubbyError("\"\(name)\" cannot be decrypted")
@@ -103,9 +92,7 @@ struct RemoveCommand: ParsableCommand {
 
     func run() throws {
         try Store.requireStore()
-        guard let path = try Store.existingRecordPath(for: name),
-            try Store.remove(path, what: "\"\(name)\"")
-        else {
+        guard try Store.remove(Store.recordPath(for: name), what: "\"\(name)\"") else {
             throw CubbyError("no secret named \"\(name)\"")
         }
         print("Deleted \"\(name)\"")
@@ -117,16 +104,8 @@ struct ListCommand: ParsableCommand {
 
     func run() throws {
         try Store.requireStore()
-        let (names, refused) = try Store.secretNames()
-        for name in names {
+        for name in try Store.secretNames() {
             print(name)
-        }
-        guard refused.isEmpty else {
-            fflush(stdout)
-            for problem in refused {
-                FileHandle.standardError.write(Data("Error: \(problem)\n".utf8))
-            }
-            throw ExitCode.failure
         }
     }
 }

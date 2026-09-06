@@ -28,66 +28,22 @@ enum Enclave {
         }
     }
 
-    /// Reads `key.blob` once and verifies that the key it holds requires user interaction.
-    ///
-    /// `Store.requireStore()` must have passed first: on its own this reports a missing store
-    /// as a key that cannot be loaded.
-    ///
-    /// Callers must restore the key from the returned bytes rather than re-reading the file,
-    /// so that the key that was verified is the key that gets used.
-    static func loadVerifiedKeyBlob() throws -> Data {
+    static func loadKeyBlob() throws -> Data {
         guard let blob = try Store.read(Store.keyPath, what: "the store key in \(Store.display(Store.home))") else {
             throw CubbyError("the store key in \(Store.display(Store.home)) cannot be loaded")
         }
-        try verifyRequiresInteraction(blob)
         return blob
     }
 
-    /// Fails unless using the key would prompt the user.
-    ///
-    /// A key agreement is attempted under an `LAContext` that forbids interaction. The only
-    /// acceptable outcome is `LAError.notInteractive`: the key demanded authentication and the
-    /// context refused to show a prompt. Success means the key has no authentication
-    /// requirement. Any other Touch ID condition is reported in plain words.
-    static func verifyRequiresInteraction(_ blob: Data) throws {
-        let context = LAContext()
-        context.interactionNotAllowed = true
-        let key = try restore(blob, context: context)
-
-        let probeInfo = Data("cubby/verify".utf8)
-        let sender = try HPKE.Sender(recipientKey: key.publicKey, ciphersuite: Record.suite, info: probeInfo)
-        do {
-            _ = try HPKE.Recipient(
-                privateKey: key, ciphersuite: Record.suite, info: probeInfo,
-                encapsulatedKey: sender.encapsulatedKey)
-        } catch let error as LAError where error.code == .notInteractive {
-            return
-        } catch let error as LAError {
-            throw CubbyError("Touch ID: \(error.localizedDescription)")
-        } catch {
-            throw CubbyError(
-                "the store key in \(Store.display(Store.home)) cannot be used: \(error.localizedDescription)")
-        }
-        throw CubbyError("the store key in \(Store.display(Store.home)) does not require Touch ID")
-    }
-
-    /// Restores the key from verified bytes with a fresh `LAContext` whose reason names the
-    /// operation, the secret, and the store fingerprint. The password fallback button is
-    /// hidden: the key's access control accepts biometry only. No authentication happens here.
+    /// Restores the key from `blob` with a fresh `LAContext` whose reason names the operation
+    /// and the secret. The password fallback button is hidden: the key's access control
+    /// accepts biometry only. No authentication happens here.
     static func restoreKey(from blob: Data, operation: String, name: SecretName) throws -> PrivateKey {
         let context = LAContext()
         context.localizedFallbackTitle = ""
         let key = try restore(blob, context: context)
-        context.localizedReason = "\(operation) \(name)\nstore: \(fingerprint(of: key.publicKey))"
+        context.localizedReason = "\(operation) \(name)"
         return key
-    }
-
-    /// First 8 bytes of SHA-256 over the 64-byte raw public key, as `xxxx-xxxx-xxxx-xxxx`.
-    static func fingerprint(of publicKey: P256.KeyAgreement.PublicKey) -> String {
-        let bytes = Array(SHA256.hash(data: publicKey.rawRepresentation).prefix(8))
-        return stride(from: 0, to: bytes.count, by: 2)
-            .map { Hex.encode(bytes[$0..<$0 + 2]) }
-            .joined(separator: "-")
     }
 
     private static func restore(_ blob: Data, context: LAContext) throws -> PrivateKey {
