@@ -51,7 +51,7 @@ struct SetCommand: StoreCommand {
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
-    @Flag(help: "Read the value from standard input instead of the terminal.") var fromStdin = false
+    @Flag(help: "Read the value from standard input.") var fromStdin = false
 
     func run(in store: Store, to output: Output) throws {
         let enclave = Enclave(store: store)
@@ -126,6 +126,6 @@ struct ListCommand: StoreCommand {
 
 extension SecretName {
     static var argumentHelp: ArgumentHelp {
-        "The secret's name: 1 to \(maxLength) printable ASCII characters, no spaces."
+        "The secret's name."
     }
 }
