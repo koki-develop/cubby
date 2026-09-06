@@ -120,13 +120,12 @@ enum Store {
 
     /// Writes `data` to `path` without ever exposing a partially written file.
     ///
-    /// The data goes to `<path>.tmp`, created fresh with mode 0600 (a stale one is replaced),
-    /// and is `fsync`ed, then `rename`d over `path`. On any failure the temporary file is
-    /// removed and `path` is left untouched. Failures are reported as `could not <action>`.
+    /// The data goes to `<path>.tmp`, created with mode 0600, and is `fsync`ed, then `rename`d
+    /// over `path`. On any failure the temporary file is removed and `path` is left untouched.
+    /// Failures are reported as `could not <action>`.
     static func writeAtomically(_ data: Data, to path: String, action: String) throws {
         let tmp = temporaryPath(for: path)
-        unlink(tmp)
-        let fd = open(tmp, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+        let fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0o600)
         guard fd >= 0 else {
             let code = errno
             throw CubbyError("could not \(action): \(message(for: code))")

@@ -29,7 +29,6 @@ enum Record {
     /// Touch ID is requested while constructing the recipient. Returns `nil` when the record
     /// is malformed or fails authentication.
     static func open(_ record: Data, name: SecretName, key: Enclave.PrivateKey) throws -> Data? {
-        guard record.count > encapsulatedKeySize else { return nil }
         let encapsulatedKey = record.prefix(encapsulatedKeySize)
         let ciphertext = record.dropFirst(encapsulatedKeySize)
         var recipient: HPKE.Recipient
