@@ -1,5 +1,4 @@
 import ArgumentParser
-import CryptoKit
 import Foundation
 import Testing
 
@@ -150,7 +149,7 @@ import Testing
         }
     }
 
-    @Test(.enabled(if: SecureEnclave.isAvailable))
+    @Test(.enabled(if: Enclave.unsupported == nil, "this Mac cannot hold a store"))
     func createsAStoreAndSaysWhere() throws {
         try withStore { store in
             let recorded = Recorded()
@@ -164,7 +163,7 @@ import Testing
         }
     }
 
-    @Test(.enabled(if: SecureEnclave.isAvailable))
+    @Test(.enabled(if: Enclave.unsupported == nil, "this Mac cannot hold a store"))
     func refusesTheSecondTime() throws {
         try withStore { store in
             try InitCommand().run(in: store, to: Recorded().output)
@@ -175,7 +174,7 @@ import Testing
         }
     }
 
-    @Test(.enabled(if: SecureEnclave.isAvailable))
+    @Test(.enabled(if: Enclave.unsupported == nil, "this Mac cannot hold a store"))
     func writesAKeyThatCanBeLoadedBack() throws {
         try withStore { store in
             try InitCommand().run(in: store, to: Recorded().output)
@@ -187,14 +186,16 @@ import Testing
         }
     }
 
-    @Test(.disabled(if: SecureEnclave.isAvailable, "the Secure Enclave is available here"))
-    func reportsAMissingSecureEnclave() throws {
+    /// The refusal has to come before any of the store exists, or a Mac that cannot hold one
+    /// would still be left with an empty `~/.cubby` after every attempt.
+    @Test(.disabled(if: Enclave.unsupported == nil, "this Mac can hold a store"))
+    func saysWhyItCannotCreateAStoreAndCreatesNothing() throws {
         try withStore { store in
             let error = #expect(throws: CubbyError.self) {
                 try InitCommand().run(in: store, to: Recorded().output)
             }
-            #expect(error?.description == "the Secure Enclave is not available")
-            #expect(!store.hasKey())
+            #expect(error?.description == Enclave.unsupported?.description)
+            #expect(!exists(store.home))
         }
     }
 }

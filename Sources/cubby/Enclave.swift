@@ -10,14 +10,37 @@ struct Enclave {
     /// The store the key belongs to. Its location appears in every message here.
     let store: Store
 
+    /// Why this Mac cannot hold a store, or `nil` when it can.
+    ///
+    /// A store needs two things: a Secure Enclave to keep its key in, and a biometry to gate
+    /// that key on. `SecureEnclave.isAvailable` answers only the first, and a Mac can have an
+    /// enclave with no Touch ID enrolled — a virtual machine is one. There the key is refused
+    /// the moment it is created, under a bare `Authentication failure` that names neither what
+    /// was missing nor what to do about it.
+    static var unsupported: CubbyError? {
+        guard SecureEnclave.isAvailable else {
+            return CubbyError("the Secure Enclave is not available")
+        }
+        var error: NSError?
+        guard LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            switch error.flatMap({ LAError.Code(rawValue: $0.code) }) {
+            case .biometryNotEnrolled:
+                return CubbyError("no Touch ID is enrolled; add one in System Settings first")
+            case .biometryLockout:
+                return CubbyError("Touch ID is locked out; enter your password to re-enable it")
+            default:
+                return CubbyError("Touch ID is not available")
+            }
+        }
+        return nil
+    }
+
     /// Generates a new key that can only be used after Touch ID succeeds.
     ///
     /// The access control is passed explicitly: the initializer's default is an empty flag
     /// set, which yields a key that never asks for authentication.
     func generateKey() throws -> PrivateKey {
-        guard SecureEnclave.isAvailable else {
-            throw CubbyError("the Secure Enclave is not available")
-        }
+        if let unsupported = Enclave.unsupported { throw unsupported }
         var error: Unmanaged<CFError>?
         guard let acl = SecAccessControlCreateWithFlags(
             nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, [.privateKeyUsage, .biometryAny], &error)
