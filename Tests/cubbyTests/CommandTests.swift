@@ -181,7 +181,7 @@ import Testing
             let blob = try Enclave(store: store).loadKeyBlob()
             #expect(!blob.isEmpty)
             #expect(throws: Never.self) {
-                try Enclave(store: store).restoreKey(from: blob, operation: "read", name: SecretName("token"))
+                try Enclave(store: store).restoreKey(from: blob, for: .read(SecretName("token")))
             }
         }
     }
@@ -197,6 +197,17 @@ import Testing
             #expect(error?.description == Enclave.unsupported?.description)
             #expect(!exists(store.home))
         }
+    }
+}
+
+/// `set` picks between two of these titles, and the prompt they appear in is out of a test's
+/// reach, so the strings are pinned here instead.
+@Suite struct EnclavePurposeTests {
+    @Test func titlesEachPurpose() throws {
+        let name = try SecretName("token")
+        #expect(Enclave.Purpose.read(name).title == "Read the secret \"token\"")
+        #expect(Enclave.Purpose.save(name).title == "Save a new secret \"token\"")
+        #expect(Enclave.Purpose.replace(name).title == "Replace the secret \"token\"")
     }
 }
 
@@ -219,7 +230,7 @@ import Testing
         try withInitializedStore { store in
             let blob = try Enclave(store: store).loadKeyBlob()
             let error = #expect(throws: CubbyError.self) {
-                try Enclave(store: store).restoreKey(from: blob, operation: "read", name: SecretName("token"))
+                try Enclave(store: store).restoreKey(from: blob, for: .read(SecretName("token")))
             }
             #expect(
                 error?.description.hasPrefix(

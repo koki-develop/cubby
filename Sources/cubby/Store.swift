@@ -89,6 +89,11 @@ struct Store {
         secretsDir + "/" + Store.recordEntry(for: name)
     }
 
+    /// Whether the store already holds a record under `name`.
+    func hasRecord(for name: SecretName) -> Bool {
+        FileManager.default.fileExists(atPath: recordPath(for: name))
+    }
+
     /// Names of all stored secrets, sorted. Entries not named like a record are left out.
     func secretNames() throws -> [SecretName] {
         try Store.entries(of: secretsDir).compactMap(Store.recordName(ofEntry:)).sorted()

@@ -69,7 +69,8 @@ struct SetCommand: StoreCommand {
             value = try Terminal.readSecret(prompt: "Value for \(name): ")
             guard !value.isEmpty else { throw CubbyError("no value was entered") }
         }
-        let key = try enclave.restoreKey(from: blob, operation: "write", name: name)
+        let purpose: Enclave.Purpose = store.hasRecord(for: name) ? .replace(name) : .save(name)
+        let key = try enclave.restoreKey(from: blob, for: purpose)
         let record = try Record.seal(value, name: name, key: key)
         try Store.writeAtomically(record, to: store.recordPath(for: name), action: "save \"\(name)\"")
         output.line("Saved \"\(name)\"")
@@ -87,7 +88,7 @@ struct GetCommand: StoreCommand {
         guard let record = try Store.read(store.recordPath(for: name), what: "\"\(name)\"") else {
             throw CubbyError("no secret named \"\(name)\"")
         }
-        let key = try enclave.restoreKey(from: blob, operation: "read", name: name)
+        let key = try enclave.restoreKey(from: blob, for: .read(name))
         guard let plaintext = try Record.open(record, name: name, key: key) else {
             throw CubbyError("\"\(name)\" cannot be decrypted")
         }

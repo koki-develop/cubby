@@ -78,6 +78,24 @@ import Testing
     }
 }
 
+@Suite struct StoreRecordTests {
+    @Test func holdsNoRecordForANameNothingWasStoredUnder() throws {
+        try withInitializedStore { store in
+            let token = try SecretName("token")
+            #expect(!store.hasRecord(for: token))
+        }
+    }
+
+    @Test func holdsARecordOnceOneIsWrittenUnderTheName() throws {
+        try withInitializedStore { store in
+            try plantRecord("token", in: store)
+            let (token, other) = try (SecretName("token"), SecretName("other"))
+            #expect(store.hasRecord(for: token))
+            #expect(!store.hasRecord(for: other))
+        }
+    }
+}
+
 @Suite struct StoreDirectoryTests {
     @Test func createsTheRootAndTheSecretsDirectoryAtMode0700() throws {
         try withStore { store in

@@ -62,14 +62,34 @@ struct Enclave {
         return blob
     }
 
-    /// Restores the key from `blob` with a fresh `LAContext` whose reason names the operation
-    /// and the secret. The password fallback button is hidden: the key's access control
-    /// accepts biometry only. No authentication happens here.
-    func restoreKey(from blob: Data, operation: String, name: SecretName) throws -> PrivateKey {
+    /// What the key is about to be used for, in the words the Touch ID dialog shows.
+    ///
+    /// On macOS `localizedReason` is the dialog's *title*, so a case reads as one:
+    /// capitalized, and carrying no app name — the dialog shows that itself. `save` and
+    /// `replace` are separate because `set` overwrites in silence, and losing the old value
+    /// is the part worth approving.
+    enum Purpose {
+        case read(SecretName)
+        case save(SecretName)
+        case replace(SecretName)
+
+        var title: String {
+            switch self {
+            case .read(let name): "Read the secret \"\(name)\""
+            case .save(let name): "Save a new secret \"\(name)\""
+            case .replace(let name): "Replace the secret \"\(name)\""
+            }
+        }
+    }
+
+    /// Restores the key from `blob` with a fresh `LAContext` whose reason names the purpose.
+    /// The password fallback button is hidden: the key's access control accepts biometry
+    /// only. No authentication happens here.
+    func restoreKey(from blob: Data, for purpose: Purpose) throws -> PrivateKey {
         let context = LAContext()
         context.localizedFallbackTitle = ""
         let key = try restore(blob, context: context)
-        context.localizedReason = "\(operation) \(name)"
+        context.localizedReason = purpose.title
         return key
     }
 
