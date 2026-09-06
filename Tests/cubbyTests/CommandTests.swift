@@ -11,7 +11,7 @@ import Testing
             let error = #expect(throws: CubbyError.self) {
                 try ListCommand().run(in: store, to: Recorded().output)
             }
-            #expect(error?.description == "no store at \(Store.display(store.home)); run cubby init first")
+            #expect(error?.description == "no store at \(Store.display(store.home)); run `cubby init` first")
         }
     }
 
@@ -62,7 +62,7 @@ import Testing
             let error = #expect(throws: CubbyError.self) {
                 try remove("token", in: store, to: Recorded().output)
             }
-            #expect(error?.description == "no store at \(Store.display(store.home)); run cubby init first")
+            #expect(error?.description == "no store at \(Store.display(store.home)); run `cubby init` first")
         }
     }
 
@@ -203,7 +203,7 @@ import Testing
     @Test func reportsAMissingStoreWhenThereIsNoKeyBlob() throws {
         try withStore { store in
             let error = #expect(throws: CubbyError.self) { try Enclave(store: store).loadKeyBlob() }
-            #expect(error?.description == "no store at \(Store.display(store.home)); run cubby init first")
+            #expect(error?.description == "no store at \(Store.display(store.home)); run `cubby init` first")
         }
     }
 

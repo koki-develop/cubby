@@ -67,7 +67,7 @@ import Testing
     @Test func requiringAMissingStoreReportsTheInitHint() throws {
         try withStore { store in
             let error = #expect(throws: CubbyError.self) { try store.requireStore() }
-            #expect(error?.description == "no store at \(Store.display(store.home)); run cubby init first")
+            #expect(error?.description == "no store at \(Store.display(store.home)); run `cubby init` first")
         }
     }
 

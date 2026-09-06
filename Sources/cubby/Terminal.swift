@@ -18,7 +18,7 @@ enum Terminal {
         guard result != nil else {
             let code = errno
             if code == ENOTTY {
-                throw CubbyError("no terminal to read the value from; use --from-stdin")
+                throw CubbyError("no terminal to read the value from; use `--from-stdin`")
             }
             throw CubbyError("could not read the value: \(String(cString: strerror(code)))")
         }

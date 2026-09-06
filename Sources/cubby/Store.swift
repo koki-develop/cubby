@@ -52,7 +52,7 @@ struct Store {
 
     /// Raised when there is no store.
     var noStore: CubbyError {
-        CubbyError("no store at \(Store.display(home)); run cubby init first")
+        CubbyError("no store at \(Store.display(home)); run `cubby init` first")
     }
 
     /// Fails unless the location holds a store key.
