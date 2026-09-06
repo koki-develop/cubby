@@ -12,12 +12,12 @@ enum Record {
     static let encapsulatedKeySize = 65
 
     /// Binds a record to its name so that a record cannot be opened under another name.
-    static func info(for name: String) -> Data {
-        Data(("cubby/v1:" + name).utf8)
+    static func info(for name: SecretName) -> Data {
+        Data(("cubby/v1:" + name.text).utf8)
     }
 
     /// Touch ID is requested while constructing the sender.
-    static func seal(_ plaintext: Data, name: String, key: Enclave.PrivateKey) throws -> Data {
+    static func seal(_ plaintext: Data, name: SecretName, key: Enclave.PrivateKey) throws -> Data {
         var sender = try authenticating {
             try HPKE.Sender(
                 recipientKey: key.publicKey, ciphersuite: suite, info: info(for: name), authenticatedBy: key)
@@ -28,7 +28,7 @@ enum Record {
 
     /// Touch ID is requested while constructing the recipient. Returns `nil` when the record
     /// is malformed or fails authentication.
-    static func open(_ record: Data, name: String, key: Enclave.PrivateKey) throws -> Data? {
+    static func open(_ record: Data, name: SecretName, key: Enclave.PrivateKey) throws -> Data? {
         guard record.count > encapsulatedKeySize else { return nil }
         let encapsulatedKey = record.prefix(encapsulatedKeySize)
         let ciphertext = record.dropFirst(encapsulatedKeySize)

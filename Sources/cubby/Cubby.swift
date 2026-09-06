@@ -1,4 +1,5 @@
 import ArgumentParser
+import CryptoKit
 import Foundation
 
 struct CubbyError: Error, CustomStringConvertible {
@@ -24,14 +25,8 @@ struct InitCommand: ParsableCommand {
 
     func run() throws {
         let alreadyExists = CubbyError("a store already exists at \(Store.display(Store.home))")
-        if Store.exists(Store.keyPath) { throw alreadyExists }
-        if try Store.hasSecretEntries() {
-            throw CubbyError(
-                "\(Store.display(Store.home)) holds secrets but no store key; restore the key or delete \(Store.display(Store.secretsDir)) first")
-        }
-        if try Store.homeHoldsForeignEntries() {
-            throw CubbyError("\(Store.display(Store.home)) already exists and is not empty")
-        }
+        if try Store.hasKey() { throw alreadyExists }
+        try Store.requireEmptyLocation()
         let key = try Enclave.generateKey()
         try Enclave.verifyRequiresInteraction(key.dataRepresentation)
         try Store.createDirectories()
@@ -48,14 +43,15 @@ struct InitCommand: ParsableCommand {
 struct SetCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "set")
 
-    @Argument var name: String
+    @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
-    @Flag var fromStdin = false
+    @Flag(help: "Read the value from standard input instead of the terminal.") var fromStdin = false
 
     func run() throws {
+        try Store.requireStore()
         let blob = try Enclave.loadVerifiedKeyBlob()
         try Store.ensureWritableSecretsDirectory()
-        try Store.checkWritable(recordAt: Store.recordPath(for: name))
+        try Store.checkWritable(recordFor: name)
         let value: Data
         if fromStdin {
             do {
@@ -78,11 +74,13 @@ struct SetCommand: ParsableCommand {
 struct GetCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "get")
 
-    @Argument var name: String
+    @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
     func run() throws {
         try Store.requireStore()
-        guard let record = try Store.read(Store.recordPath(for: name), what: "\"\(name)\"") else {
+        guard let path = try Store.existingRecordPath(for: name),
+            let record = try Store.read(path, what: "\"\(name)\"")
+        else {
             throw CubbyError("no secret named \"\(name)\"")
         }
         let blob = try Enclave.loadVerifiedKeyBlob()
@@ -101,11 +99,13 @@ struct GetCommand: ParsableCommand {
 struct RemoveCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "rm")
 
-    @Argument var name: String
+    @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
     func run() throws {
         try Store.requireStore()
-        guard try Store.remove(Store.recordPath(for: name), what: "\"\(name)\"") else {
+        guard let path = try Store.existingRecordPath(for: name),
+            try Store.remove(path, what: "\"\(name)\"")
+        else {
             throw CubbyError("no secret named \"\(name)\"")
         }
         print("Deleted \"\(name)\"")
@@ -117,8 +117,22 @@ struct ListCommand: ParsableCommand {
 
     func run() throws {
         try Store.requireStore()
-        for name in try Store.secretNames() {
+        let (names, refused) = try Store.secretNames()
+        for name in names {
             print(name)
         }
+        guard refused.isEmpty else {
+            fflush(stdout)
+            for problem in refused {
+                FileHandle.standardError.write(Data("Error: \(problem)\n".utf8))
+            }
+            throw ExitCode.failure
+        }
+    }
+}
+
+extension SecretName {
+    static var argumentHelp: ArgumentHelp {
+        "The secret's name: 1 to \(maxLength) printable ASCII characters, no spaces."
     }
 }

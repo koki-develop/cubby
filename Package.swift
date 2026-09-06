@@ -13,6 +13,9 @@ let package = Package(
             name: "cubby",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            swiftSettings: [
+                .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
     ]

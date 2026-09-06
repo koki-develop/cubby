@@ -30,10 +30,12 @@ enum Enclave {
 
     /// Reads `key.blob` once and verifies that the key it holds requires user interaction.
     ///
+    /// `Store.requireStore()` must have passed first: on its own this reports a missing store
+    /// as a key that cannot be loaded.
+    ///
     /// Callers must restore the key from the returned bytes rather than re-reading the file,
     /// so that the key that was verified is the key that gets used.
     static func loadVerifiedKeyBlob() throws -> Data {
-        try Store.requireStore()
         guard let blob = try Store.read(Store.keyPath, what: "the store key in \(Store.display(Store.home))") else {
             throw CubbyError("the store key in \(Store.display(Store.home)) cannot be loaded")
         }
@@ -72,7 +74,7 @@ enum Enclave {
     /// Restores the key from verified bytes with a fresh `LAContext` whose reason names the
     /// operation, the secret, and the store fingerprint. The password fallback button is
     /// hidden: the key's access control accepts biometry only. No authentication happens here.
-    static func restoreKey(from blob: Data, operation: String, name: String) throws -> PrivateKey {
+    static func restoreKey(from blob: Data, operation: String, name: SecretName) throws -> PrivateKey {
         let context = LAContext()
         context.localizedFallbackTitle = ""
         let key = try restore(blob, context: context)
@@ -82,13 +84,9 @@ enum Enclave {
 
     /// First 8 bytes of SHA-256 over the 64-byte raw public key, as `xxxx-xxxx-xxxx-xxxx`.
     static func fingerprint(of publicKey: P256.KeyAgreement.PublicKey) -> String {
-        let digest = SHA256.hash(data: publicKey.rawRepresentation)
-        let hex = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
-        return stride(from: 0, to: hex.count, by: 4)
-            .map { offset -> Substring in
-                let start = hex.index(hex.startIndex, offsetBy: offset)
-                return hex[start..<hex.index(start, offsetBy: 4)]
-            }
+        let bytes = Array(SHA256.hash(data: publicKey.rawRepresentation).prefix(8))
+        return stride(from: 0, to: bytes.count, by: 2)
+            .map { Hex.encode(bytes[$0..<$0 + 2]) }
             .joined(separator: "-")
     }
 
