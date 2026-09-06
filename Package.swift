@@ -18,5 +18,12 @@ let package = Package(
                 .enableUpcomingFeature("MemberImportVisibility"),
             ]
         ),
+        .testTarget(
+            name: "cubbyTests",
+            dependencies: ["cubby"],
+            swiftSettings: [
+                .enableUpcomingFeature("MemberImportVisibility"),
+            ]
+        ),
     ]
 )

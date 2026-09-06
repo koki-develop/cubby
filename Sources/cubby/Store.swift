@@ -13,22 +13,30 @@ import Foundation
 /// `<hex>` is `SecretName.encoded`: the file system only ever sees hex digits, never the
 /// name itself. Files are written through a sibling `<file>.tmp`.
 ///
-/// The root directory is `~/.cubby`, or `$CUBBY_HOME` when that is set to a non-empty value.
-enum Store {
-    static let home: String = {
-        if let override = ProcessInfo.processInfo.environment["CUBBY_HOME"], !override.isEmpty {
-            return override
-        }
-        return NSHomeDirectory() + "/.cubby"
-    }()
-
-    static let keyPath = home + "/key.blob"
-    static let secretsDir = home + "/secrets"
+/// A store is addressed by its root, which a command takes from the environment. The file
+/// primitives at the bottom take a path and belong to no particular store.
+struct Store {
     static let recordSuffix = ".bin"
     static let temporarySuffix = ".tmp"
 
+    /// The store root.
+    let home: String
+
+    /// The store rooted at `$CUBBY_HOME`, or at `~/.cubby` when that is unset or empty.
+    static func fromEnvironment(
+        _ environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Store {
+        if let override = environment["CUBBY_HOME"], !override.isEmpty {
+            return Store(home: override)
+        }
+        return Store(home: NSHomeDirectory() + "/.cubby")
+    }
+
+    var keyPath: String { home + "/key.blob" }
+    var secretsDir: String { home + "/secrets" }
+
     /// The store's location as shown in messages.
-    static let location = "the store at " + display(home)
+    var location: String { "the store at " + Store.display(home) }
 
     /// `path` with the user's home directory shortened to `~`, for messages.
     static func display(_ path: String) -> String {
@@ -38,23 +46,23 @@ enum Store {
     // MARK: Layout
 
     /// Whether the location holds a store key.
-    static func hasKey() -> Bool {
+    func hasKey() -> Bool {
         FileManager.default.fileExists(atPath: keyPath)
     }
 
     /// Raised when there is no store.
-    static var noStore: CubbyError {
-        CubbyError("no store at \(display(home)); run cubby init first")
+    var noStore: CubbyError {
+        CubbyError("no store at \(Store.display(home)); run cubby init first")
     }
 
     /// Fails unless the location holds a store key.
-    static func requireStore() throws {
+    func requireStore() throws {
         guard hasKey() else { throw noStore }
     }
 
     /// Creates `secrets/` and, with it, the store root, at mode 0700. Existing directories are
     /// left as they are.
-    static func ensureDirectories() throws {
+    func ensureDirectories() throws {
         do {
             try FileManager.default.createDirectory(
                 atPath: secretsDir, withIntermediateDirectories: true,
@@ -77,13 +85,13 @@ enum Store {
     // MARK: Records
 
     /// Where the record for `name` is written.
-    static func recordPath(for name: SecretName) -> String {
-        secretsDir + "/" + recordEntry(for: name)
+    func recordPath(for name: SecretName) -> String {
+        secretsDir + "/" + Store.recordEntry(for: name)
     }
 
     /// Names of all stored secrets, sorted. Entries not named like a record are left out.
-    static func secretNames() throws -> [SecretName] {
-        try entries(of: secretsDir).compactMap(recordName(ofEntry:)).sorted()
+    func secretNames() throws -> [SecretName] {
+        try Store.entries(of: secretsDir).compactMap(Store.recordName(ofEntry:)).sorted()
     }
 
     private static func recordEntry(for name: SecretName) -> String {
