@@ -3,14 +3,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "thumb",
+    name: "cubby",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
     ],
     targets: [
         .executableTarget(
-            name: "thumb",
+            name: "cubby",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]

@@ -1,7 +1,7 @@
 import ArgumentParser
 
 @main
-struct Thumb: ParsableCommand {
+struct Cubby: ParsableCommand {
     static let configuration = CommandConfiguration(
         subcommands: [
             InitCommand.self,
