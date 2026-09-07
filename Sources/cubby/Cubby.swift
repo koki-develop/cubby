@@ -10,6 +10,7 @@ struct CubbyError: Error, CustomStringConvertible {
 @main
 struct Cubby: ParsableCommand {
     static let configuration = CommandConfiguration(
+        abstract: "Secret store gated by Touch ID.",
         subcommands: [
             InitCommand.self,
             SetCommand.self,
@@ -35,7 +36,8 @@ extension StoreCommand {
 }
 
 struct InitCommand: StoreCommand {
-    static let configuration = CommandConfiguration(commandName: "init")
+    static let configuration = CommandConfiguration(
+        commandName: "init", abstract: "Create the store.")
 
     func run(in store: Store, to output: Output) throws {
         if store.hasKey() { throw store.alreadyAStore }
@@ -51,7 +53,8 @@ struct InitCommand: StoreCommand {
 }
 
 struct SetCommand: StoreCommand {
-    static let configuration = CommandConfiguration(commandName: "set")
+    static let configuration = CommandConfiguration(
+        commandName: "set", abstract: "Save a secret under a name.")
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
@@ -104,7 +107,8 @@ struct SetCommand: StoreCommand {
 }
 
 struct GetCommand: StoreCommand {
-    static let configuration = CommandConfiguration(commandName: "get")
+    static let configuration = CommandConfiguration(
+        commandName: "get", abstract: "Print the secret stored under a name.")
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
@@ -127,7 +131,8 @@ struct GetCommand: StoreCommand {
 }
 
 struct RemoveCommand: StoreCommand {
-    static let configuration = CommandConfiguration(commandName: "rm")
+    static let configuration = CommandConfiguration(
+        commandName: "rm", abstract: "Delete the secret stored under a name.")
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
@@ -141,7 +146,8 @@ struct RemoveCommand: StoreCommand {
 }
 
 struct ListCommand: StoreCommand {
-    static let configuration = CommandConfiguration(commandName: "list")
+    static let configuration = CommandConfiguration(
+        commandName: "list", abstract: "List the names of the stored secrets.")
 
     func run(in store: Store, to output: Output) throws {
         try store.requireStore()
