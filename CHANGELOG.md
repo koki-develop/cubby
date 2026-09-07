@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/koki-develop/cubby/compare/v0.1.0...v0.2.0) (2026-09-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* `cubby set <name>` no longer overwrites an existing secret; pass `--force` to replace one.
+
+### Features
+
+* Refuse to overwrite an existing secret unless --force is passed ([293dab9](https://github.com/koki-develop/cubby/commit/293dab9d3d4d1da506579791f003ac0ca2c3bf3c))
+* Release v0.1.1 ([539059a](https://github.com/koki-develop/cubby/commit/539059a6b3310623e8ad85b817d37d69e04286d3))
+* Release v0.2.0 ([94661a7](https://github.com/koki-develop/cubby/commit/94661a72cf9a432606757de57e98fa62b064429b))
+
 ## 0.1.0 (2026-09-07)
 
 
