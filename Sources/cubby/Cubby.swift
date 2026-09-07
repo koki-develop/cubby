@@ -54,13 +54,13 @@ struct InitCommand: StoreCommand {
 
 struct SetCommand: StoreCommand {
     static let configuration = CommandConfiguration(
-        commandName: "set", abstract: "Save a secret under a name.")
+        commandName: "set", abstract: "Save a secret.")
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
     @Flag(help: "Read the value from standard input.") var fromStdin = false
 
-    @Flag(help: "Replace the secret when one under the name is already stored.") var force = false
+    @Flag(help: "Replace a secret that already exists.") var force = false
 
     func run(in store: Store, to output: Output) throws {
         let enclave = Enclave(store: store)
@@ -108,7 +108,7 @@ struct SetCommand: StoreCommand {
 
 struct GetCommand: StoreCommand {
     static let configuration = CommandConfiguration(
-        commandName: "get", abstract: "Print the secret stored under a name.")
+        commandName: "get", abstract: "Print a secret.")
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
@@ -132,7 +132,7 @@ struct GetCommand: StoreCommand {
 
 struct RemoveCommand: StoreCommand {
     static let configuration = CommandConfiguration(
-        commandName: "rm", abstract: "Delete the secret stored under a name.")
+        commandName: "rm", abstract: "Delete a secret.")
 
     @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 

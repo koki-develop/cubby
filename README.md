@@ -28,7 +28,7 @@ Save a secret. The value is read from the terminal with echo off:
 ```sh
 cubby set my-secret
 cubby set my-secret --from-stdin  # read the value from standard input instead
-cubby set my-secret --force       # replace the value already stored under the name
+cubby set my-secret --force       # replace the value already stored
 ```
 
 Read one back:

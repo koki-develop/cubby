@@ -11,7 +11,7 @@ enum Record {
     static let suite = HPKE.Ciphersuite.P256_SHA256_AES_GCM_256
     static let encapsulatedKeySize = 65
 
-    /// Binds a record to its name so that a record cannot be opened under another name.
+    /// Binds a record to its name so that a record cannot be opened with another name.
     static func info(for name: SecretName) -> Data {
         Data(("cubby/v1:" + name.text).utf8)
     }

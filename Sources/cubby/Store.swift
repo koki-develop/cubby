@@ -94,12 +94,12 @@ struct Store {
         secretsDir + "/" + Store.recordEntry(for: name)
     }
 
-    /// Whether the store already holds a record under `name`.
+    /// Whether the store already holds a record named `name`.
     func hasRecord(for name: SecretName) -> Bool {
         FileManager.default.fileExists(atPath: recordPath(for: name))
     }
 
-    /// Raised when a record under `name` is there and the caller was not told to replace it.
+    /// Raised when a record named `name` is there and the caller was not told to replace it.
     static func alreadyExists(_ name: SecretName) -> CubbyError {
         CubbyError("a secret named \"\(name)\" already exists; pass `--force` to replace it")
     }
@@ -114,7 +114,7 @@ struct Store {
     }
 
     /// The name a `secrets/` entry is named after, or `nil` when it is not named like a
-    /// record: only the spelling cubby writes counts, so an entry under another spelling is
+    /// record: only the spelling cubby writes counts, so an entry with another spelling is
     /// not a record even where the volume matches names case-insensitively.
     private static func recordName(ofEntry entry: String) -> SecretName? {
         guard entry.hasSuffix(recordSuffix) else { return nil }
