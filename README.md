@@ -1,5 +1,9 @@
 # cubby
 
+[![GitHub Release](https://img.shields.io/github/v/release/koki-develop/cubby?style=flat-square)](https://github.com/koki-develop/cubby/releases/latest)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/koki-develop/cubby/ci.yml?style=flat-square&logo=github)](https://github.com/koki-develop/cubby/actions/workflows/ci.yml)
+[![GitHub License](https://img.shields.io/github/license/koki-develop/cubby?style=flat-square)](./LICENSE)
+
 A macOS CLI that keeps secrets on disk, encrypted under a Secure Enclave key gated by Touch ID.
 
 The key lives in the Secure Enclave and never exists outside it, so saving or reading a secret always costs one Touch ID prompt.
