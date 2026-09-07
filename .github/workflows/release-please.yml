@@ -40,6 +40,8 @@ jobs:
     env:
       TAG_NAME: ${{ needs.release-please.outputs.tag-name }}
       ARCHIVE: cubby_Darwin_arm64.tar.gz
+    outputs:
+      sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -48,6 +50,7 @@ jobs:
       - run: swift build -c release --arch arm64
 
       - name: Pack the archive
+        id: pack
         run: |
           # Not .build/apple/Products/Release: that layout is only for a build
           # of more than one architecture.
@@ -55,7 +58,10 @@ jobs:
           mkdir dist
           cp "$bin/cubby" LICENSE dist/
           tar -czf "$ARCHIVE" -C dist cubby LICENSE
-          shasum -a 256 "$ARCHIVE" > checksums.txt
+          sum=$(shasum -a 256 "$ARCHIVE")
+          echo "$sum" > checksums.txt
+          # The formula the homebrew-tap job writes carries the same sum.
+          echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
 
       - name: Upload the assets
         # --clobber so a re-run replaces what a partial run left behind.
@@ -68,3 +74,62 @@ jobs:
         run: gh release edit "$TAG_NAME" --draft=false
         env:
           GH_TOKEN: ${{ github.token }}
+
+  homebrew-tap:
+    needs: [release-please, release]
+    if: ${{ needs.release-please.outputs.should-release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {} # the tap is written with an app token, not this workflow's
+    env:
+      TAG_NAME: ${{ needs.release-please.outputs.tag-name }}
+      SHA256: ${{ needs.release.outputs.sha256 }}
+    steps:
+      - name: Generate the formula
+        # #{version} reaches the formula literally; only $version and $SHA256
+        # are the shell's.
+        run: |
+          version="${TAG_NAME#v}"
+          cat > cubby.rb <<EOF
+          class Cubby < Formula
+            desc "Secret store gated by Touch ID"
+            homepage "https://github.com/koki-develop/cubby"
+            version "$version"
+            license "MIT"
+
+            url "https://github.com/koki-develop/cubby/releases/download/v#{version}/cubby_Darwin_arm64.tar.gz"
+            sha256 "$SHA256"
+
+            depends_on arch: :arm64
+            depends_on macos: :sonoma
+
+            def install
+              bin.install "cubby"
+            end
+
+            test do
+              system bin/"cubby", "--help"
+            end
+          end
+          EOF
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.HOMEBREW_TAP_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: homebrew-tap
+          permission-contents: write # for committing the formula
+      - name: Commit the formula to the tap
+        run: |
+          path="repos/${OWNER}/homebrew-tap/contents/Formula/cubby.rb"
+          sha=$(gh api "$path" --jq .sha)
+          gh api --method PUT "$path" \
+            -f "message=chore: update cubby to ${TAG_NAME}" \
+            -f "content=$(base64 -w0 cubby.rb)" \
+            -f "sha=$sha"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag-name }}
