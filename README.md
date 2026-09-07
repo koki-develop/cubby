@@ -6,7 +6,7 @@
 
 A macOS CLI that keeps secrets on disk, encrypted under a Secure Enclave key gated by Touch ID.
 
-The key lives in the Secure Enclave and never exists outside it, so saving or reading a secret always costs one Touch ID prompt.
+Every save and every read costs one Touch ID prompt.
 
 ## Requirements
 
@@ -48,7 +48,13 @@ cubby list
 cubby rm my-secret
 ```
 
-## Storage
+## How it works
+
+The store's key is a P-256 key generated inside the Secure Enclave, and it never leaves it. `key.blob` holds a wrapped form that only that same enclave can turn back into a usable key, so a copy of the store is inert on any other Mac. Using the key takes Touch ID, with no password fallback.
+
+`cubby set` seals the value with HPKE (P-256 / SHA-256 / AES-GCM-256) under that key and writes it to `secrets/<hex>.bin`; `cubby get` opens it again.
+
+Each record carries the name it was sealed under, so a record copied to another name no longer opens, and one altered on disk is refused rather than decrypted into something else.
 
 The store lives at `~/.cubby`, or at `$CUBBY_HOME` when that is set:
 
@@ -59,9 +65,7 @@ The store lives at `~/.cubby`, or at `$CUBBY_HOME` when that is set:
     └── <hex>.bin        one secret                   (0600)
 ```
 
-Secrets are sealed with HPKE (P-256 / SHA-256 / AES-GCM-256).
-
-`key.blob` only unwraps inside the Secure Enclave that created it, so a copy of the store is unreadable on any other Mac.
+`<hex>` is the name in hex: the file system never sees a character you typed.
 
 ## License
 
