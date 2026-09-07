@@ -37,6 +37,11 @@ import Testing
         #expect(try (Cubby.parseAsRoot(["set", "token", "--from-stdin"]) as? SetCommand)?.fromStdin == true)
     }
 
+    @Test func readsTheForceFlag() throws {
+        #expect(try (Cubby.parseAsRoot(["set", "token"]) as? SetCommand)?.force == false)
+        #expect(try (Cubby.parseAsRoot(["set", "token", "--force"]) as? SetCommand)?.force == true)
+    }
+
     @Test func takesNoArgumentWhereNoneIsExpected() {
         #expect(throws: (any Error).self) { try Cubby.parseAsRoot(["list", "token"]) }
         #expect(throws: (any Error).self) { try Cubby.parseAsRoot(["init", "token"]) }

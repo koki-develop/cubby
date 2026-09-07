@@ -66,8 +66,8 @@ struct Enclave {
     ///
     /// On macOS `localizedReason` is the dialog's *title*, so a case reads as one:
     /// capitalized, and carrying no app name — the dialog shows that itself. `save` and
-    /// `replace` are separate because `set` overwrites in silence, and losing the old value
-    /// is the part worth approving.
+    /// `replace` are separate because a replacement destroys the value already stored, and
+    /// that is the part worth approving.
     enum Purpose {
         case read(SecretName)
         case save(SecretName)

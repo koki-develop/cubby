@@ -35,8 +35,8 @@ func plant(_ entry: String, in store: Store, contents: Data = Data()) throws {
 }
 
 /// Puts a record for `name` into the store.
-func plantRecord(_ name: String, in store: Store) throws {
-    try plant(SecretName(name).encoded + Store.recordSuffix, in: store)
+func plantRecord(_ name: String, in store: Store, contents: Data = Data()) throws {
+    try plant(SecretName(name).encoded + Store.recordSuffix, in: store, contents: contents)
 }
 
 /// The permission bits of the file or directory at `path`.

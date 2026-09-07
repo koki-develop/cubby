@@ -178,7 +178,9 @@ import Testing
     @Test func ignoresATemporarySiblingNextToTheRecordItBelongsTo() throws {
         try withInitializedStore { store in
             try plantRecord("token", in: store)
-            try plant(SecretName("token").encoded + Store.recordSuffix + Store.temporarySuffix, in: store)
+            try plant(
+                SecretName("token").encoded + Store.recordSuffix + Store.temporarySuffix + "aB3d9Z",
+                in: store)
             #expect(try store.secretNames().map(\.text) == ["token"])
         }
     }

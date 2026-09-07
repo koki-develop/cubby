@@ -11,13 +11,13 @@ import Foundation
 /// ```
 ///
 /// `<hex>` is `SecretName.encoded`: the file system only ever sees hex digits, never the
-/// name itself. Files are written through a sibling `<file>.tmp`.
+/// name itself. Files are written through a temporary sibling.
 ///
 /// A store is addressed by its root, which a command takes from the environment. The file
 /// primitives at the bottom take a path and belong to no particular store.
 struct Store {
     static let recordSuffix = ".bin"
-    static let temporarySuffix = ".tmp"
+    static let temporarySuffix = ".tmp."
 
     /// The store root.
     let home: String
@@ -53,6 +53,11 @@ struct Store {
     /// Raised when there is no store.
     var noStore: CubbyError {
         CubbyError("no store at \(Store.display(home)); run `cubby init` first")
+    }
+
+    /// Raised when the location holds a store already.
+    var alreadyAStore: CubbyError {
+        CubbyError("a store already exists at \(Store.display(home))")
     }
 
     /// Fails unless the location holds a store key.
@@ -94,6 +99,11 @@ struct Store {
         FileManager.default.fileExists(atPath: recordPath(for: name))
     }
 
+    /// Raised when a record under `name` is there and the caller was not told to replace it.
+    static func alreadyExists(_ name: SecretName) -> CubbyError {
+        CubbyError("a secret named \"\(name)\" already exists; pass `--force` to replace it")
+    }
+
     /// Names of all stored secrets, sorted. Entries not named like a record are left out.
     func secretNames() throws -> [SecretName] {
         try Store.entries(of: secretsDir).compactMap(Store.recordName(ofEntry:)).sorted()
@@ -111,8 +121,25 @@ struct Store {
         return SecretName(encoded: String(entry.dropLast(recordSuffix.count)))
     }
 
-    private static func temporaryPath(for path: String) -> String {
-        path + temporarySuffix
+    /// Opens a temporary file next to `path`. A failure is reported here rather than handed
+    /// back, so that `errno` is read where the call left it.
+    ///
+    /// The name is `mkstemp`'s to pick: one derived from `path` alone would have two writes to
+    /// the same destination truncating each other's file, and the rename would move the
+    /// spliced result into place. `mkstemp` creates the file exclusively, at mode 0600, which
+    /// the rename carries over to `path`.
+    private static func openTemporary(besides path: String, action: String) throws -> (
+        descriptor: Int32, path: String
+    ) {
+        var template = Array((path + temporarySuffix + "XXXXXX").utf8) + [0]
+        let descriptor = template.withUnsafeMutableBufferPointer { buffer in
+            buffer.withMemoryRebound(to: CChar.self) { mkstemp($0.baseAddress!) }
+        }
+        guard descriptor >= 0 else {
+            let code = errno
+            throw CubbyError("could not \(action): \(message(for: code))")
+        }
+        return (descriptor, String(decoding: template.dropLast(), as: UTF8.self))
     }
 
     // MARK: Files
@@ -131,18 +158,31 @@ struct Store {
         }
     }
 
-    /// Writes `data` to `path` without ever exposing a partially written file.
+    /// Writes `data` to `path` without ever exposing a partially written file, replacing
+    /// whatever is there.
     ///
-    /// The data goes to `<path>.tmp`, created with mode 0600, and is `fsync`ed, then `rename`d
-    /// over `path`. On any failure the temporary file is removed and `path` is left untouched.
-    /// Failures are reported as `could not <action>`.
+    /// The data goes to a temporary sibling, created with mode 0600, and is `fsync`ed, then
+    /// `rename`d over `path`. On any failure the temporary file is removed and `path` is left
+    /// untouched. Failures are reported as `could not <action>`.
     static func writeAtomically(_ data: Data, to path: String, action: String) throws {
-        let tmp = temporaryPath(for: path)
-        let fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0o600)
-        guard fd >= 0 else {
-            let code = errno
-            throw CubbyError("could not \(action): \(message(for: code))")
-        }
+        _ = try write(data, to: path, action: action, replacing: true)
+    }
+
+    /// Writes `data` the same way, but only where nothing is: returns `false`, having written
+    /// nothing and left the file that is there untouched, when `path` is taken.
+    ///
+    /// What decides is the rename itself, so a caller that looked before calling cannot lose a
+    /// file that appeared in between.
+    static func createAtomically(_ data: Data, to path: String, action: String) throws -> Bool {
+        try write(data, to: path, action: action, replacing: false)
+    }
+
+    /// The body of both writes. Returns `false` only for the one failure `createAtomically`
+    /// answers rather than reports: a destination that is already taken.
+    private static func write(_ data: Data, to path: String, action: String, replacing: Bool) throws
+        -> Bool
+    {
+        let (fd, tmp) = try openTemporary(besides: path, action: action)
         var renamed = false
         defer { if !renamed { unlink(tmp) } }
 
@@ -161,11 +201,16 @@ struct Store {
         } catch {
             throw CubbyError("could not \(action): \(error.localizedDescription)")
         }
-        guard rename(tmp, path) == 0 else {
+        // `RENAME_EXCL` fails with `EEXIST` instead of replacing, leaving the destination as
+        // it is.
+        let moved = replacing ? rename(tmp, path) : renamex_np(tmp, path, UInt32(RENAME_EXCL))
+        guard moved == 0 else {
             let code = errno
+            if !replacing, code == EEXIST { return false }
             throw CubbyError("could not \(action): \(message(for: code))")
         }
         renamed = true
+        return true
     }
 
     /// Unlinks one file. Returns `false` when there is no such file. A directory at `path`

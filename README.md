@@ -23,11 +23,12 @@ Create the store once:
 cubby init
 ```
 
-Save a secret. The value is read from the terminal with echo off, or from standard input with `--from-stdin`:
+Save a secret. The value is read from the terminal with echo off:
 
 ```sh
 cubby set my-secret
-cubby set my-secret --from-stdin
+cubby set my-secret --from-stdin  # read the value from standard input instead
+cubby set my-secret --force       # replace the value already stored under the name
 ```
 
 Read one back:

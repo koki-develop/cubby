@@ -38,10 +38,14 @@ struct InitCommand: StoreCommand {
     static let configuration = CommandConfiguration(commandName: "init")
 
     func run(in store: Store, to output: Output) throws {
-        if store.hasKey() { throw CubbyError("a store already exists at \(Store.display(store.home))") }
+        if store.hasKey() { throw store.alreadyAStore }
         let key = try Enclave(store: store).generateKey()
         try store.ensureDirectories()
-        try Store.writeAtomically(key.dataRepresentation, to: store.keyPath, action: "create \(store.location)")
+        // The write is what refuses, not the check above: replacing a key that appeared in
+        // between would leave every secret already sealed under it unreadable.
+        guard try Store.createAtomically(
+            key.dataRepresentation, to: store.keyPath, action: "create \(store.location)")
+        else { throw store.alreadyAStore }
         output.line("Created a store at \(Store.display(store.home))")
     }
 }
@@ -53,27 +57,49 @@ struct SetCommand: StoreCommand {
 
     @Flag(help: "Read the value from standard input.") var fromStdin = false
 
+    @Flag(help: "Replace the secret when one under the name is already stored.") var force = false
+
     func run(in store: Store, to output: Output) throws {
         let enclave = Enclave(store: store)
         let blob = try enclave.loadKeyBlob()
+        let replacing = store.hasRecord(for: name)
+        // Refused before the value is asked for: entering the secret and answering Touch ID
+        // would otherwise be spent on a record that is thrown away.
+        if replacing, !force { throw Store.alreadyExists(name) }
         try store.ensureDirectories()
-        let value: Data
+        let value = try readValue()
+        let key = try enclave.restoreKey(from: blob, for: replacing ? .replace(name) : .save(name))
+        let record = try Record.seal(value, name: name, key: key)
+        try write(record, to: store)
+        output.line("Saved \"\(name)\"")
+    }
+
+    private func readValue() throws -> Data {
         if fromStdin {
+            let value: Data
             do {
                 value = try FileHandle.standardInput.readToEnd() ?? Data()
             } catch {
                 throw CubbyError("could not read standard input: \(error.localizedDescription)")
             }
             guard !value.isEmpty else { throw CubbyError("no value on standard input") }
-        } else {
-            value = try Terminal.readSecret(prompt: "Value for \(name): ")
-            guard !value.isEmpty else { throw CubbyError("no value was entered") }
+            return value
         }
-        let purpose: Enclave.Purpose = store.hasRecord(for: name) ? .replace(name) : .save(name)
-        let key = try enclave.restoreKey(from: blob, for: purpose)
-        let record = try Record.seal(value, name: name, key: key)
-        try Store.writeAtomically(record, to: store.recordPath(for: name), action: "save \"\(name)\"")
-        output.line("Saved \"\(name)\"")
+        let value = try Terminal.readSecret(prompt: "Value for \(name): ")
+        guard !value.isEmpty else { throw CubbyError("no value was entered") }
+        return value
+    }
+
+    /// Writes the sealed record. Without `--force` the write is the one that refuses a taken
+    /// name, so a record written since the first check is refused too rather than lost.
+    private func write(_ record: Data, to store: Store) throws {
+        let path = store.recordPath(for: name)
+        let action = "save \"\(name)\""
+        if force {
+            try Store.writeAtomically(record, to: path, action: action)
+        } else if try !Store.createAtomically(record, to: path, action: action) {
+            throw Store.alreadyExists(name)
+        }
     }
 }
 

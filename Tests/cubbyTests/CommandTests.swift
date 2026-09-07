@@ -200,6 +200,64 @@ import Testing
     }
 }
 
+/// Sealing a record needs a real Secure Enclave key and a Touch ID that no test can answer, so
+/// what is tested here is everything `set` settles before it asks for a value.
+@Suite struct SetCommandTests {
+    private func set(_ arguments: [String], in store: Store, to output: Output) throws {
+        try SetCommand.parse(arguments).run(in: store, to: output)
+    }
+
+    @Test func reportsAMissingStore() throws {
+        try withStore { store in
+            let error = #expect(throws: CubbyError.self) {
+                try set(["token"], in: store, to: Recorded().output)
+            }
+            #expect(error?.description == "no store at \(Store.display(store.home)); run `cubby init` first")
+        }
+    }
+
+    /// The hint about `cubby init` comes first even where a record is lying around: without a
+    /// key there is nothing to seal the value with either way.
+    @Test func reportsAMissingStoreAheadOfAnExistingSecret() throws {
+        try withStore { store in
+            try store.ensureDirectories()
+            try plantRecord("token", in: store)
+            let error = #expect(throws: CubbyError.self) {
+                try set(["token"], in: store, to: Recorded().output)
+            }
+            #expect(error?.description.hasPrefix("no store at ") == true)
+        }
+    }
+
+    @Test func refusesWhenTheSecretAlreadyExists() throws {
+        try withInitializedStore { store in
+            try plantRecord("token", in: store)
+            let recorded = Recorded()
+            let error = #expect(throws: CubbyError.self) {
+                try set(["token"], in: store, to: recorded.output)
+            }
+            #expect(
+                error?.description
+                    == "a secret named \"token\" already exists; pass `--force` to replace it")
+            #expect(recorded.text.isEmpty)
+        }
+    }
+
+    /// The refusal has to come before the value is read, or entering a secret would be the
+    /// price of finding out that the name is taken.
+    @Test func refusesBeforeItReadsTheValue() throws {
+        try withInitializedStore { store in
+            try plantRecord("token", in: store, contents: Data("sealed".utf8))
+            let error = #expect(throws: CubbyError.self) {
+                try set(["token", "--from-stdin"], in: store, to: Recorded().output)
+            }
+            #expect(error?.description.hasPrefix("a secret named \"token\" already exists") == true)
+            let path = store.recordPath(for: try SecretName("token"))
+            #expect(try Store.read(path, what: "the record") == Data("sealed".utf8))
+        }
+    }
+}
+
 /// `set` picks between two of these titles, and the prompt they appear in is out of a test's
 /// reach, so the strings are pinned here instead.
 @Suite struct EnclavePurposeTests {
