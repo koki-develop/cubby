@@ -1,0 +1,70 @@
+name: Release Please
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release-please:
+    permissions:
+      contents: write # for pushing the tag and creating the release
+      pull-requests: write # for opening the release pull request
+      issues: write # for creating the labels that pull request is marked with
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      should-release: ${{ steps.release-please.outputs.release_created }}
+      tag-name: ${{ steps.release-please.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release-please
+
+  release:
+    needs: [release-please]
+    if: ${{ needs.release-please.outputs.should-release == 'true' }}
+    runs-on: macos-latest # cubby only builds and runs on macOS
+    timeout-minutes: 20
+    permissions:
+      contents: write # for uploading the release assets and publishing the release
+    env:
+      TAG_NAME: ${{ needs.release-please.outputs.tag-name }}
+      ARCHIVE: cubby_Darwin_arm64.tar.gz
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag-name }}
+          persist-credentials: false
+      - run: swift build -c release --arch arm64
+
+      - name: Pack the archive
+        run: |
+          # Not .build/apple/Products/Release: that layout is only for a build
+          # of more than one architecture.
+          bin=$(swift build -c release --arch arm64 --show-bin-path)
+          mkdir dist
+          cp "$bin/cubby" LICENSE dist/
+          tar -czf "$ARCHIVE" -C dist cubby LICENSE
+          shasum -a 256 "$ARCHIVE" > checksums.txt
+
+      - name: Upload the assets
+        # --clobber so a re-run replaces what a partial run left behind.
+        run: gh release upload "$TAG_NAME" "$ARCHIVE" checksums.txt --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Publish the release
+        # release-please creates the release as a draft, so that it becomes
+        # visible only once it carries the binary.
+        run: gh release edit "$TAG_NAME" --draft=false
+        env:
+          GH_TOKEN: ${{ github.token }}
