@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/koki-develop/cubby/compare/v0.3.0...v0.3.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* Install the completion scripts the tool already generates ([7e61d09](https://github.com/koki-develop/cubby/commit/7e61d09b1138186252e031c6a94bb3b926cadc16))
+
 ## [0.3.0](https://github.com/koki-develop/cubby/compare/v0.2.0...v0.3.0) (2026-09-08)
 
 
