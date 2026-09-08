@@ -10,7 +10,11 @@ swift test
 swift run cubby <subcommand>
 mise bootstrap                 # install the lefthook git hooks (once per clone)
 betterleaks git                # secret scan, same command CI runs
+swift format lint --recursive --strict Package.swift Sources Tests    # same command CI runs
+swift format format --in-place --recursive Package.swift Sources Tests
 ```
+
+swift-format runs under its defaults — two-space indentation, 100 columns, no `.swift-format` in the repo — and ships with the toolchain, so its rules follow whichever Xcode is installed.
 
 `CUBBY_HOME` overrides the store root (default `~/.cubby`). **Always set it when exercising the CLI** — otherwise you write into the user's real store. Point it at a directory you can throw away:
 
