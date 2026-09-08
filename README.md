@@ -8,6 +8,8 @@ A macOS CLI that keeps secrets on disk, encrypted under a Secure Enclave key gat
 
 Every save and every read costs one Touch ID prompt.
 
+<img src="./screenshots/dialog.png" alt="Screenshot" width="400px" />
+
 ## Requirements
 
 - macOS 14 or later, on Apple silicon
