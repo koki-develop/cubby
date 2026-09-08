@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/koki-develop/cubby/compare/v0.2.0...v0.3.0) (2026-09-08)
+
+
+### Features
+
+* Give the tool a --version flag ([69cbbd2](https://github.com/koki-develop/cubby/commit/69cbbd23db5e17ada280e2cc4bb6b92f6ef29f1c))
+
 ## [0.2.0](https://github.com/koki-develop/cubby/compare/v0.1.0...v0.2.0) (2026-09-07)
 
 
