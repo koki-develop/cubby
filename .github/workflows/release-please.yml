@@ -105,6 +105,7 @@ jobs:
 
             def install
               bin.install "cubby"
+              generate_completions_from_executable(bin/"cubby", "--generate-completion-script")
             end
 
             test do
