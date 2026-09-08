@@ -4,7 +4,8 @@
     ".": {
       "release-type": "simple",
       "draft": true,
-      "force-tag-creation": true
+      "force-tag-creation": true,
+      "extra-files": ["Sources/cubby/Cubby.swift"]
     }
   }
 }

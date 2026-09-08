@@ -12,6 +12,14 @@ import Testing
         #expect(try Cubby.parseAsRoot(["list"]) is ListCommand)
     }
 
+    /// A release rewrites the literal, and one that produced nothing usable turns `--version`
+    /// into a blank line.
+    @Test func carriesAVersionToReport() {
+        let parts = Cubby.configuration.version.split(separator: ".", omittingEmptySubsequences: false)
+        #expect(parts.count == 3)
+        #expect(parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII && $0.isNumber } })
+    }
+
     @Test func rejectsAnUnknownSubcommand() {
         #expect(throws: (any Error).self) { try Cubby.parseAsRoot(["nope"]) }
     }

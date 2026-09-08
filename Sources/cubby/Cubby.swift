@@ -11,6 +11,9 @@ struct CubbyError: Error, CustomStringConvertible {
 struct Cubby: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Secret store gated by Touch ID.",
+        // release-please rewrites this on release: the annotation marks the line, and
+        // `release-please-config.json` lists the file.
+        version: "0.2.0",  // x-release-please-version
         subcommands: [
             InitCommand.self,
             SetCommand.self,
