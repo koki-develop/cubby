@@ -13,7 +13,7 @@ struct Cubby: ParsableCommand {
     abstract: "Secret store gated by Touch ID.",
     // release-please rewrites this on release: the annotation marks the line, and
     // `release-please-config.json` lists the file.
-    version: "0.3.1",  // x-release-please-version
+    version: "0.3.2",  // x-release-please-version
     subcommands: [
       InitCommand.self,
       SetCommand.self,
