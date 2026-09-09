@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/koki-develop/cubby/compare/v0.3.1...v0.3.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* Ask for the value without repeating the name back ([63c4c68](https://github.com/koki-develop/cubby/commit/63c4c68ca8c56e2d4bf59fbea5ad2f28af5a617b))
+
 ## [0.3.1](https://github.com/koki-develop/cubby/compare/v0.3.0...v0.3.1) (2026-09-08)
 
 
