@@ -92,7 +92,7 @@ struct SetCommand: StoreCommand {
       guard !value.isEmpty else { throw CubbyError("no value on standard input") }
       return value
     }
-    let value = try Terminal.readSecret(prompt: "Value for \(name): ")
+    let value = try Terminal.readSecret(prompt: "Value: ")
     guard !value.isEmpty else { throw CubbyError("no value was entered") }
     return value
   }
