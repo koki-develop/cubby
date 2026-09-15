@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/koki-develop/cubby/compare/v0.3.2...v0.4.0) (2026-09-15)
+
+
+### Features
+
+* Let get, set, and list answer to g, s, and ls ([469ced0](https://github.com/koki-develop/cubby/commit/469ced04b44d5aed8f4369cc3a72dbe823411656))
+
 ## [0.3.2](https://github.com/koki-develop/cubby/compare/v0.3.1...v0.3.2) (2026-09-09)
 
 
