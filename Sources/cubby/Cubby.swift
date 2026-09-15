@@ -58,7 +58,7 @@ struct InitCommand: StoreCommand {
 
 struct SetCommand: StoreCommand {
   static let configuration = CommandConfiguration(
-    commandName: "set", abstract: "Save a secret.")
+    commandName: "set", abstract: "Save a secret.", aliases: ["s"])
 
   @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
@@ -112,7 +112,7 @@ struct SetCommand: StoreCommand {
 
 struct GetCommand: StoreCommand {
   static let configuration = CommandConfiguration(
-    commandName: "get", abstract: "Print a secret.")
+    commandName: "get", abstract: "Print a secret.", aliases: ["g"])
 
   @Argument(help: SecretName.argumentHelp, transform: SecretName.init) var name: SecretName
 
@@ -151,7 +151,7 @@ struct RemoveCommand: StoreCommand {
 
 struct ListCommand: StoreCommand {
   static let configuration = CommandConfiguration(
-    commandName: "list", abstract: "List the names of the stored secrets.")
+    commandName: "list", abstract: "List the names of the stored secrets.", aliases: ["ls"])
 
   func run(in store: Store, to output: Output) throws {
     try store.requireStore()
